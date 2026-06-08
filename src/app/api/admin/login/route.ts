@@ -29,7 +29,8 @@ export async function POST(request: Request) {
   if (!admin) {
     const demoEmail = process.env.ADMIN_EMAIL ?? "admin@example.com";
     const demoPassword = process.env.ADMIN_PASSWORD ?? "replace-with-a-secure-password";
-    const allowDemoAdmin = process.env.NODE_ENV !== "production";
+    const hasConfiguredAdmin = Boolean(process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD);
+    const allowDemoAdmin = process.env.NODE_ENV !== "production" || hasConfiguredAdmin;
 
     if (!allowDemoAdmin || payload.data.email !== demoEmail || payload.data.password !== demoPassword) {
       return NextResponse.json({ error: "Invalid admin credentials" }, { status: 401 });

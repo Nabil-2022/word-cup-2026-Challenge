@@ -30,6 +30,10 @@ function getSessionSecret() {
   return secret;
 }
 
+function allowConfiguredAdminFallback() {
+  return Boolean(process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD);
+}
+
 function base64UrlEncode(value: string) {
   return Buffer.from(value).toString("base64url");
 }
@@ -109,7 +113,7 @@ export async function requireAdminSession() {
   }
 
   if (!admin) {
-    if (process.env.NODE_ENV !== "production" && session.adminId === "demo-admin") {
+    if ((process.env.NODE_ENV !== "production" || allowConfiguredAdminFallback()) && session.adminId === "demo-admin") {
       return {
         id: "demo-admin",
         name: "Demo Admin",
@@ -143,7 +147,7 @@ export async function requireAdminApiSession() {
   }
 
   if (!admin) {
-    if (process.env.NODE_ENV !== "production" && session.adminId === "demo-admin") {
+    if ((process.env.NODE_ENV !== "production" || allowConfiguredAdminFallback()) && session.adminId === "demo-admin") {
       return {
         admin: {
           id: "demo-admin",
