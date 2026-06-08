@@ -1,0 +1,314 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum EligibilityStatus {
+  eligible
+  blocked_country
+  underage
+  excluded
+}
+
+enum UserStatus {
+  registered
+  participant
+  excluded
+}
+
+enum AdminRole {
+  owner
+  admin
+  support
+}
+
+enum MatchResult {
+  ONE
+  DRAW
+  TWO
+}
+
+enum MatchStatus {
+  upcoming
+  finished
+  cancelled
+}
+
+enum EntryStatus {
+  draft
+  pending_payment
+  validated
+  locked
+  scored
+  excluded
+}
+
+enum PredictionChoice {
+  ONE
+  DRAW
+  TWO
+}
+
+enum PaymentStatus {
+  pending
+  succeeded
+  failed
+  refunded
+  disputed
+}
+
+enum PaymentProvider {
+  stripe
+}
+
+enum WinnerVerificationStatus {
+  pending
+  validated
+  refused
+}
+
+enum WinnerPaymentStatus {
+  pending
+  paid
+}
+
+model User {
+  id                String            @id @default(cuid())
+  firstName         String
+  lastName          String
+  email             String            @unique
+  phone             String?
+  countryCode       String
+  birthDate         DateTime
+  isAdult           Boolean           @default(false)
+  eligibilityStatus EligibilityStatus @default(eligible)
+  status            UserStatus        @default(registered)
+  createdAt         DateTime          @default(now())
+
+  entries        Entry[]
+  payments       Payment[]
+  winners        Winner[]
+  complianceLogs ComplianceLog[]
+
+  @@index([countryCode])
+  @@index([eligibilityStatus])
+  @@index([status])
+  @@index([createdAt])
+  @@map("users")
+}
+
+model Admin {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         AdminRole @default(admin)
+  createdAt    DateTime  @default(now())
+
+  auditLogs AuditLog[]
+
+  @@index([role])
+  @@index([createdAt])
+  @@map("admins")
+}
+
+model Match {
+  id          String       @id @default(cuid())
+  groupName   String?
+  team1       String
+  team2       String
+  matchDate   DateTime
+  scoreTeam1  Int?
+  scoreTeam2  Int?
+  result      MatchResult?
+  status      MatchStatus  @default(upcoming)
+  createdAt   DateTime     @default(now())
+
+  predictions Prediction[]
+
+  @@index([groupName])
+  @@index([matchDate])
+  @@index([status])
+  @@index([result])
+  @@map("matches")
+}
+
+model Entry {
+  id                String      @id @default(cuid())
+  userId            String
+  paymentId         String?     @unique
+  status            EntryStatus @default(draft)
+  totalMatches      Int         @default(0)
+  completedMatches  Int         @default(0)
+  score             Int         @default(0)
+  rank              Int?
+  tiebreakAnswer    Int?
+  tiebreakDistance  Int?
+  validatedAt       DateTime?
+  lockedAt          DateTime?
+  createdAt         DateTime    @default(now())
+
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  selectedPayment   Payment?     @relation("EntrySelectedPayment", fields: [paymentId], references: [id], onDelete: SetNull)
+  payments          Payment[]    @relation("EntryPayments")
+  predictions       Prediction[]
+  leaderboardRecord Leaderboard?
+  winners           Winner[]
+
+  @@index([userId])
+  @@index([paymentId])
+  @@index([status])
+  @@index([score, tiebreakDistance])
+  @@index([rank])
+  @@index([createdAt])
+  @@map("entries")
+}
+
+model Prediction {
+  id        String           @id @default(cuid())
+  entryId   String
+  matchId   String
+  choice    PredictionChoice
+  isCorrect Boolean?
+  createdAt DateTime         @default(now())
+
+  entry Entry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([entryId, matchId])
+  @@index([matchId])
+  @@index([choice])
+  @@index([isCorrect])
+  @@map("predictions")
+}
+
+model Payment {
+  id                String          @id @default(cuid())
+  userId            String
+  entryId           String
+  amount            Decimal         @db.Decimal(10, 2)
+  platformFee       Decimal         @db.Decimal(10, 2)
+  prizeBudgetAmount Decimal         @db.Decimal(10, 2)
+  currency          String          @default("usd")
+  status            PaymentStatus   @default(pending)
+  provider          PaymentProvider @default(stripe)
+  providerReference String?         @unique
+  createdAt         DateTime        @default(now())
+
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entry           Entry   @relation("EntryPayments", fields: [entryId], references: [id], onDelete: Cascade)
+  selectedByEntry Entry[] @relation("EntrySelectedPayment")
+  logs            PaymentLog[]
+
+  @@index([userId])
+  @@index([entryId])
+  @@index([status])
+  @@index([provider])
+  @@index([createdAt])
+  @@map("payments")
+}
+
+model PaymentLog {
+  id                String   @id @default(cuid())
+  paymentId         String
+  eventType         String
+  providerReference String?
+  payload           Json?
+  createdAt         DateTime @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@map("paymentLogs")
+}
+
+model Leaderboard {
+  id               String   @id @default(cuid())
+  entryId          String   @unique
+  score            Int      @default(0)
+  rank             Int
+  tiebreakDistance Int?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  entry Entry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@index([score, tiebreakDistance])
+  @@index([rank])
+  @@index([updatedAt])
+  @@map("leaderboard")
+}
+
+model Winner {
+  id                 String                     @id @default(cuid())
+  userId             String
+  entryId            String
+  rank               Int
+  amount             Decimal                    @db.Decimal(10, 2)
+  verificationStatus WinnerVerificationStatus   @default(pending)
+  paymentStatus      WinnerPaymentStatus        @default(pending)
+  createdAt          DateTime                   @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entry Entry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@unique([entryId, rank])
+  @@index([userId])
+  @@index([rank])
+  @@index([verificationStatus])
+  @@index([paymentStatus])
+  @@index([createdAt])
+  @@map("winners")
+}
+
+model ComplianceLog {
+  id           String   @id @default(cuid())
+  userId       String?
+  action       String
+  ipAddress    String?
+  country      String?
+  device       String?
+  termsVersion String?
+  createdAt    DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([country])
+  @@index([createdAt])
+  @@map("complianceLogs")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  adminId    String?
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  admin Admin? @relation(fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@index([adminId])
+  @@index([action])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("auditLogs")
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
