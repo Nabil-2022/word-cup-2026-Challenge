@@ -96,6 +96,20 @@ function mergeMatches(primaryMatches: MatchItem[], secondaryMatches: MatchItem[]
   });
 }
 
+async function readApiJson(response: Response) {
+  const text = await response.text();
+
+  if (!text) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text) as Record<string, any>;
+  } catch {
+    return { error: text };
+  }
+}
+
 export function ChallengeTunnel() {
   const [step, setStep] = useState(1);
   const [participant, setParticipant] = useState<ParticipantForm>(emptyParticipant);
@@ -153,6 +167,12 @@ export function ChallengeTunnel() {
   const tieBreakComplete = tieBreakAnswer.trim() !== "" && Number(tieBreakAnswer) >= 0;
   const readyForCheckout =
     participantComplete && isAdult && countryAllowed && gridComplete && tieBreakComplete && termsAccepted;
+  const missingCheckoutItems = [
+    !tieBreakComplete ? "Tie-break answer is required." : null,
+    !termsAccepted ? "Official rules acceptance is required." : null,
+    !gridComplete ? "Complete every match prediction." : null,
+    !participantComplete || !isAdult || !countryAllowed ? "Eligibility must be confirmed." : null
+  ].filter(Boolean);
 
   function saveDraft(nextMessage = "Draft saved on this device.") {
     const draft: DraftState = {
@@ -223,7 +243,7 @@ export function ChallengeTunnel() {
         })
       });
 
-      const entryData = await entryResponse.json();
+      const entryData = await readApiJson(entryResponse);
       if (!entryResponse.ok) {
         throw new Error(entryData.error ?? "Unable to create your entry.");
       }
@@ -233,7 +253,7 @@ export function ChallengeTunnel() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ entryId: entryData.entry.id })
       });
-      const checkoutData = await checkoutResponse.json();
+      const checkoutData = await readApiJson(checkoutResponse);
 
       if (!checkoutResponse.ok || !checkoutData.checkoutUrl) {
         throw new Error(checkoutData.error ?? "Unable to start checkout.");
@@ -364,7 +384,7 @@ export function ChallengeTunnel() {
           <h2 className="text-xl font-bold text-night">Review</h2>
           <label className="grid gap-1 text-sm font-medium text-slate-700">
             How many total goals will be scored during the group stage?
-            <input className="rounded-lg border border-slate-300 px-4 py-3" min="0" required type="number" value={tieBreakAnswer} onChange={(event) => setTieBreakAnswer(event.target.value)} />
+            <input className="rounded-lg border border-slate-300 px-4 py-3" min="0" placeholder="Enter a number" required type="number" value={tieBreakAnswer} onChange={(event) => setTieBreakAnswer(event.target.value)} />
           </label>
           <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">
             <p className="font-semibold text-night">{participant.firstName} {participant.lastName}</p>
@@ -384,6 +404,11 @@ export function ChallengeTunnel() {
           <button className="w-full rounded-lg bg-pitch px-5 py-4 font-bold text-white disabled:bg-slate-300" disabled={!readyForCheckout || isLoading} type="button" onClick={startCheckout}>
             {isLoading ? "Starting checkout..." : "Continue to Entry Fee Checkout"}
           </button>
+          {!readyForCheckout && missingCheckoutItems.length ? (
+            <div className="rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-700">
+              {missingCheckoutItems[0]}
+            </div>
+          ) : null}
           <button className="w-full rounded-lg border border-slate-300 bg-white px-5 py-3 font-semibold text-night" type="button" onClick={() => setStep(2)}>
             Back to grid
           </button>

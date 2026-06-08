@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { canStartCheckout } from "@/lib/functional-rules";
+import { getJsonEntry } from "@/lib/json-db";
 import { prisma } from "@/lib/prisma";
 import { getStripe } from "@/lib/stripe";
 
@@ -15,13 +16,30 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid checkout payload" }, { status: 400 });
   }
 
-  const entry = await prisma.entry.findUnique({
-    where: { id: payload.data.entryId },
-    include: {
-      user: true,
-      predictions: true
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+  let entry = null;
+
+  try {
+    entry = await prisma.entry.findUnique({
+      where: { id: payload.data.entryId },
+      include: {
+        user: true,
+        predictions: true
+      }
+    });
+  } catch {
+    const jsonEntry = await getJsonEntry(payload.data.entryId);
+
+    if (!jsonEntry) {
+      return NextResponse.json({ error: "Entry not found" }, { status: 404 });
     }
-  });
+
+    return NextResponse.json({
+      checkoutUrl: `${appUrl}/payment?entryId=${jsonEntry.id}`,
+      jsonMode: true
+    });
+  }
 
   if (!entry) {
     return NextResponse.json({ error: "Entry not found" }, { status: 404 });
@@ -44,9 +62,11 @@ export async function POST(request: Request) {
     }
   });
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const stripe = getStripe();
-  const session = await stripe.checkout.sessions.create({
+  let session = null;
+
+  try {
+    const stripe = getStripe();
+    session = await stripe.checkout.sessions.create({
     mode: "payment",
     customer_email: entry.user.email,
     success_url: `${appUrl}/payment/success?entryId=${entry.id}&session_id={CHECKOUT_SESSION_ID}`,
@@ -75,7 +95,13 @@ export async function POST(request: Request) {
         quantity: 1
       }
     ]
-  });
+    });
+  } catch {
+    return NextResponse.json({
+      checkoutUrl: `${appUrl}/payment?entryId=${entry.id}`,
+      checkoutUnavailable: true
+    });
+  }
 
   await prisma.payment.update({
     where: { id: payment.id },

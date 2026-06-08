@@ -17,8 +17,31 @@ export type JsonMatch = {
   createdAt: string;
 };
 
+export type JsonEntry = {
+  id: string;
+  user: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    countryCode: string;
+    birthDate: string;
+    isAdult: boolean;
+  };
+  predictions: Array<{
+    matchId: string;
+    choice: "ONE" | "DRAW" | "TWO";
+  }>;
+  status: "pending_payment" | "locked";
+  totalMatches: number;
+  completedMatches: number;
+  tiebreakAnswer: number;
+  createdAt: string;
+};
+
 type JsonDatabase = {
   matches: JsonMatch[];
+  entries: JsonEntry[];
 };
 
 function getJsonDbPath() {
@@ -41,10 +64,11 @@ async function readJsonDatabase(): Promise<JsonDatabase> {
     const parsed = JSON.parse(content) as Partial<JsonDatabase>;
 
     return {
-      matches: Array.isArray(parsed.matches) ? parsed.matches : []
+      matches: Array.isArray(parsed.matches) ? parsed.matches : [],
+      entries: Array.isArray(parsed.entries) ? parsed.entries : []
     };
   } catch {
-    return { matches: [] };
+    return { matches: [], entries: [] };
   }
 }
 
@@ -94,4 +118,38 @@ export async function createJsonMatch(input: {
   await writeJsonDatabase(database);
 
   return match;
+}
+
+export async function createJsonEntry(input: {
+  user: JsonEntry["user"];
+  predictions: JsonEntry["predictions"];
+  tiebreakAnswer: number;
+}) {
+  const database = await readJsonDatabase();
+  const now = new Date();
+  const uniqueMatchIds = new Set(input.predictions.map((prediction) => prediction.matchId));
+  const entry: JsonEntry = {
+    id: `json-entry-${now.getTime()}`,
+    user: {
+      ...input.user,
+      countryCode: input.user.countryCode.toUpperCase(),
+      birthDate: new Date(input.user.birthDate).toISOString()
+    },
+    predictions: input.predictions,
+    status: "pending_payment",
+    totalMatches: uniqueMatchIds.size,
+    completedMatches: input.predictions.length,
+    tiebreakAnswer: input.tiebreakAnswer,
+    createdAt: now.toISOString()
+  };
+
+  database.entries = [entry, ...database.entries.filter((currentEntry) => currentEntry.id !== entry.id)];
+  await writeJsonDatabase(database);
+
+  return entry;
+}
+
+export async function getJsonEntry(entryId: string) {
+  const database = await readJsonDatabase();
+  return database.entries.find((entry) => entry.id === entryId) ?? null;
 }

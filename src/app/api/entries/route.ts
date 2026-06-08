@@ -3,6 +3,7 @@ import { z } from "zod";
 import { isAdult } from "@/lib/compliance";
 import { isCountryAllowedByPolicy } from "@/lib/country-policy";
 import { canCreateNewEntry } from "@/lib/functional-rules";
+import { createJsonEntry, getJsonMatches } from "@/lib/json-db";
 import { fallbackMatches } from "@/lib/matches";
 import { prisma } from "@/lib/prisma";
 
@@ -44,89 +45,113 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Participants must be 18+" }, { status: 403 });
   }
 
-  const existingUser = await prisma.user.findUnique({
-    where: { email: user.email },
-    include: { entries: { select: { status: true } } }
-  });
-
-  if (existingUser && !canCreateNewEntry(existingUser.entries.map((entry) => entry.status))) {
-    return NextResponse.json({ error: "Locked prediction grids cannot be modified" }, { status: 409 });
-  }
-
-  const activeMatches = await prisma.match.count({
-    where: { status: { not: "cancelled" } }
-  });
-  if (activeMatches === 0) {
-    await prisma.match.createMany({
-      data: fallbackMatches.map((match) => ({
-        id: match.id,
-        groupName: match.groupName,
-        team1: match.team1,
-        team2: match.team2,
-        matchDate: new Date(match.matchDate)
-      })),
-      skipDuplicates: true
+  try {
+    const existingUser = await prisma.user.findUnique({
+      where: { email: user.email },
+      include: { entries: { select: { status: true } } }
     });
-  }
 
-  const totalMatches = await prisma.match.count({
-    where: { status: { not: "cancelled" } }
-  });
+    if (existingUser && !canCreateNewEntry(existingUser.entries.map((entry) => entry.status))) {
+      return NextResponse.json({ error: "Locked prediction grids cannot be modified" }, { status: 409 });
+    }
 
-  if (totalMatches === 0) {
-    return NextResponse.json({ error: "No active matches are configured" }, { status: 400 });
-  }
+    const activeMatches = await prisma.match.count({
+      where: { status: { not: "cancelled" } }
+    });
+    if (activeMatches === 0) {
+      await prisma.match.createMany({
+        data: fallbackMatches.map((match) => ({
+          id: match.id,
+          groupName: match.groupName,
+          team1: match.team1,
+          team2: match.team2,
+          matchDate: new Date(match.matchDate)
+        })),
+        skipDuplicates: true
+      });
+    }
 
-  if (predictions.length !== totalMatches || uniqueMatchIds.size !== totalMatches) {
-    return NextResponse.json({ error: "Prediction grid must be complete" }, { status: 400 });
-  }
+    const totalMatches = await prisma.match.count({
+      where: { status: { not: "cancelled" } }
+    });
 
-  const entry = await prisma.$transaction(async (tx) => {
-    const createdEntry = await tx.entry.create({
-      data: {
-        tiebreakAnswer: tieBreakAnswer,
-        totalMatches,
-        completedMatches: predictions.length,
-        status: "pending_payment",
-        user: {
-          connectOrCreate: {
-            where: { email: user.email },
-            create: {
-              firstName: user.firstName,
-              lastName: user.lastName,
-              email: user.email,
-              phone: user.phone,
-              countryCode: user.countryCode.toUpperCase(),
-              birthDate: user.birthDate,
-              isAdult: user.isAdult,
-              eligibilityStatus: "eligible",
-              status: "registered"
+    if (totalMatches === 0) {
+      return NextResponse.json({ error: "No active matches are configured" }, { status: 400 });
+    }
+
+    if (predictions.length !== totalMatches || uniqueMatchIds.size !== totalMatches) {
+      return NextResponse.json({ error: "Prediction grid must be complete" }, { status: 400 });
+    }
+
+    const entry = await prisma.$transaction(async (tx) => {
+      const createdEntry = await tx.entry.create({
+        data: {
+          tiebreakAnswer: tieBreakAnswer,
+          totalMatches,
+          completedMatches: predictions.length,
+          status: "pending_payment",
+          user: {
+            connectOrCreate: {
+              where: { email: user.email },
+              create: {
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                phone: user.phone,
+                countryCode: user.countryCode.toUpperCase(),
+                birthDate: user.birthDate,
+                isAdult: user.isAdult,
+                eligibilityStatus: "eligible",
+                status: "registered"
+              }
+            }
+          },
+          predictions: {
+            createMany: {
+              data: predictions.map((prediction) => ({
+                matchId: prediction.matchId,
+                choice: prediction.choice
+              }))
             }
           }
         },
-        predictions: {
-          createMany: {
-            data: predictions.map((prediction) => ({
-              matchId: prediction.matchId,
-              choice: prediction.choice
-            }))
-          }
+        include: { user: true, predictions: true }
+      });
+
+      await tx.complianceLog.create({
+        data: {
+          userId: createdEntry.userId,
+          action: termsAccepted ? "terms_accepted" : "entry_created",
+          country: user.countryCode.toUpperCase(),
+          termsVersion: process.env.TERMS_VERSION ?? "v1"
         }
+      });
+
+      return createdEntry;
+    });
+
+    return NextResponse.json({ entry }, { status: 201 });
+  } catch {
+    const jsonMatches = await getJsonMatches();
+    const totalMatches = jsonMatches.length > 0 ? jsonMatches.length : uniqueMatchIds.size;
+
+    if (totalMatches === 0) {
+      return NextResponse.json({ error: "No active matches are configured" }, { status: 400 });
+    }
+
+    if (predictions.length !== totalMatches || uniqueMatchIds.size !== totalMatches) {
+      return NextResponse.json({ error: "Prediction grid must be complete" }, { status: 400 });
+    }
+
+    const entry = await createJsonEntry({
+      user: {
+        ...user,
+        birthDate: user.birthDate.toISOString()
       },
-      include: { user: true, predictions: true }
+      predictions,
+      tiebreakAnswer: tieBreakAnswer
     });
 
-    await tx.complianceLog.create({
-      data: {
-        userId: createdEntry.userId,
-        action: termsAccepted ? "terms_accepted" : "entry_created",
-        country: user.countryCode.toUpperCase(),
-        termsVersion: process.env.TERMS_VERSION ?? "v1"
-      }
-    });
-
-    return createdEntry;
-  });
-
-  return NextResponse.json({ entry }, { status: 201 });
+    return NextResponse.json({ entry, jsonMode: true }, { status: 201 });
+  }
 }
