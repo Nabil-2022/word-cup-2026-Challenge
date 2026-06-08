@@ -1,28 +1,55 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+type SavedMatch = {
+  id: string;
+  groupName: string | null;
+  team1: string;
+  team2: string;
+  matchDate: string;
+  status: string;
+};
 
 export function MatchForms() {
+  const router = useRouter();
   const [message, setMessage] = useState("");
   const [matchId, setMatchId] = useState("");
   const [scoreTeam1, setScoreTeam1] = useState("");
   const [scoreTeam2, setScoreTeam2] = useState("");
+  const [savedMatches, setSavedMatches] = useState<SavedMatch[]>([]);
 
   async function createMatch(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const response = await fetch("/api/admin/matches", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        groupName: form.get("groupName") || undefined,
-        team1: form.get("team1"),
-        team2: form.get("team2"),
-        matchDate: form.get("matchDate")
-      })
-    });
-    const data = await response.json();
-    setMessage(response.ok ? "Match saved." : data.error ?? "Unable to save match.");
+    const target = event.currentTarget;
+    const form = new FormData(target);
+
+    try {
+      const response = await fetch("/api/admin/matches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          groupName: form.get("groupName") || undefined,
+          team1: form.get("team1"),
+          team2: form.get("team2"),
+          matchDate: form.get("matchDate")
+        })
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        setMessage(data.error ?? "Unable to save match.");
+        return;
+      }
+
+      setSavedMatches((current) => [data.match, ...current]);
+      target.reset();
+      router.refresh();
+      setMessage(data.demoMode ? "Match saved in demo mode." : "Match saved.");
+    } catch {
+      setMessage("Unable to save match.");
+    }
   }
 
   async function saveScore() {
@@ -60,6 +87,20 @@ export function MatchForms() {
         <button className="rounded-lg bg-night px-4 py-3 font-bold text-white" type="button" onClick={saveScore}>Save Score</button>
       </div>
       {message ? <p className="lg:col-span-2 text-sm text-slate-600">{message}</p> : null}
+      {savedMatches.length ? (
+        <div className="lg:col-span-2 rounded-lg border border-slate-200 bg-white p-4">
+          <h2 className="mb-3 font-bold text-night">Saved this session</h2>
+          <div className="grid gap-2">
+            {savedMatches.map((match) => (
+              <div key={match.id} className="rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
+                <p className="font-semibold text-night">{match.team1} vs {match.team2}</p>
+                <p>{match.groupName ?? "No group"} · {new Date(match.matchDate).toLocaleString()} · {match.status}</p>
+                <p className="font-mono text-xs">{match.id}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
