@@ -38,6 +38,7 @@ const emptyParticipant: ParticipantForm = {
 };
 
 const draftKey = "wc2026_prediction_challenge_draft";
+const adminMatchesStorageKey = "world-cup-admin-demo-matches";
 const countryOptions = ["US", "CA", "GB", "FR", "MA", "MX", "DE", "ES", "IT", "BR"];
 
 function calculateAge(birthDate: string) {
@@ -59,6 +60,40 @@ function calculateAge(birthDate: string) {
   }
 
   return age;
+}
+
+function getSavedAdminMatches() {
+  const savedMatches = window.localStorage.getItem(adminMatchesStorageKey);
+
+  if (!savedMatches) {
+    return [];
+  }
+
+  try {
+    return JSON.parse(savedMatches) as MatchItem[];
+  } catch {
+    window.localStorage.removeItem(adminMatchesStorageKey);
+    return [];
+  }
+}
+
+function mergeMatches(primaryMatches: MatchItem[], secondaryMatches: MatchItem[]) {
+  const matchesById = new Map<string, MatchItem>();
+
+  for (const match of [...primaryMatches, ...secondaryMatches]) {
+    matchesById.set(match.id, match);
+  }
+
+  return [...matchesById.values()].sort((first, second) => {
+    const firstDate = new Date(first.matchDate).getTime();
+    const secondDate = new Date(second.matchDate).getTime();
+
+    if (firstDate !== secondDate) {
+      return firstDate - secondDate;
+    }
+
+    return (first.groupName ?? "").localeCompare(second.groupName ?? "");
+  });
 }
 
 export function ChallengeTunnel() {
@@ -88,9 +123,12 @@ export function ChallengeTunnel() {
         fetch("/api/matches"),
         fetch("/api/eligibility")
       ]);
-      const matchesData = (await matchesResponse.json()) as { matches: MatchItem[] };
+      const matchesData = (await matchesResponse.json()) as { matches: MatchItem[]; source?: string };
       const eligibilityData = (await eligibilityResponse.json()) as { allowedCountries: string[] };
-      setMatches(matchesData.matches);
+      const savedAdminMatches = getSavedAdminMatches();
+      const apiMatches = matchesData.source === "fallback" && savedAdminMatches.length > 0 ? [] : matchesData.matches;
+
+      setMatches(mergeMatches(savedAdminMatches, apiMatches));
       setAllowedCountries(eligibilityData.allowedCountries);
     }
 
