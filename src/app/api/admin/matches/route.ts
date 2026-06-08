@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdminApiSession } from "@/lib/admin-auth";
+import { createJsonMatch } from "@/lib/json-db";
 import { prisma } from "@/lib/prisma";
 
 const matchSchema = z.object({
@@ -29,23 +30,12 @@ export async function POST(request: Request) {
       data: payload.data
     });
   } catch {
-    const now = new Date();
+    const jsonMatch = await createJsonMatch(payload.data);
 
     return NextResponse.json(
       {
-        demoMode: true,
-        match: {
-          id: `demo-match-${now.getTime()}`,
-          groupName: payload.data.groupName ?? null,
-          team1: payload.data.team1,
-          team2: payload.data.team2,
-          matchDate: payload.data.matchDate,
-          scoreTeam1: null,
-          scoreTeam2: null,
-          result: null,
-          status: "upcoming",
-          createdAt: now
-        }
+        jsonMode: true,
+        match: jsonMatch
       },
       { status: 201 }
     );

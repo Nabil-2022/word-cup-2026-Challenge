@@ -70,7 +70,7 @@ export function MatchForms() {
       rememberSavedMatch(data.match);
       target.reset();
       router.refresh();
-      setMessage(data.demoMode ? "Match saved in demo mode." : "Match saved.");
+      setMessage(data.jsonMode ? "Match saved in JSON database." : "Match saved.");
     } catch {
       setMessage("Unable to save match.");
     }
@@ -113,12 +113,12 @@ export function MatchForms() {
       {message ? <p className="lg:col-span-2 text-sm text-slate-600">{message}</p> : null}
       {savedMatches.length ? (
         <div className="lg:col-span-2 rounded-lg border border-slate-200 bg-white p-4">
-          <h2 className="mb-3 font-bold text-night">Saved locally</h2>
+          <h2 className="mb-3 font-bold text-night">Saved recently</h2>
           <div className="grid gap-2">
             {savedMatches.map((match) => (
               <div key={match.id} className="rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
                 <p className="font-semibold text-night">{match.team1} vs {match.team2}</p>
-                <p>{match.groupName ?? "No group"} · {new Date(match.matchDate).toLocaleString()} · {match.status}</p>
+                <p>{match.groupName ?? "No group"} - {new Date(match.matchDate).toLocaleString()} - {match.status}</p>
                 <p className="font-mono text-xs">{match.id}</p>
               </div>
             ))}

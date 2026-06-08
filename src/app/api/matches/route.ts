@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getJsonMatches } from "@/lib/json-db";
 import { fallbackMatches } from "@/lib/matches";
 import { prisma } from "@/lib/prisma";
 
@@ -10,8 +11,14 @@ export async function GET() {
     })
     .catch(() => []);
 
+  if (matches.length > 0) {
+    return NextResponse.json({ matches, source: "database" });
+  }
+
+  const jsonMatches = await getJsonMatches();
+
   return NextResponse.json({
-    matches: matches.length > 0 ? matches : fallbackMatches,
-    source: matches.length > 0 ? "database" : "fallback"
+    matches: jsonMatches.length > 0 ? jsonMatches : fallbackMatches,
+    source: jsonMatches.length > 0 ? "json" : "fallback"
   });
 }
