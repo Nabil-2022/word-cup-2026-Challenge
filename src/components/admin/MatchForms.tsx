@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type SavedMatch = {
@@ -12,6 +12,8 @@ type SavedMatch = {
   status: string;
 };
 
+const demoMatchesStorageKey = "world-cup-admin-demo-matches";
+
 export function MatchForms() {
   const router = useRouter();
   const [message, setMessage] = useState("");
@@ -19,6 +21,28 @@ export function MatchForms() {
   const [scoreTeam1, setScoreTeam1] = useState("");
   const [scoreTeam2, setScoreTeam2] = useState("");
   const [savedMatches, setSavedMatches] = useState<SavedMatch[]>([]);
+
+  useEffect(() => {
+    const storedMatches = window.localStorage.getItem(demoMatchesStorageKey);
+
+    if (!storedMatches) {
+      return;
+    }
+
+    try {
+      setSavedMatches(JSON.parse(storedMatches) as SavedMatch[]);
+    } catch {
+      window.localStorage.removeItem(demoMatchesStorageKey);
+    }
+  }, []);
+
+  function rememberSavedMatch(match: SavedMatch) {
+    setSavedMatches((current) => {
+      const nextMatches = [match, ...current.filter((currentMatch) => currentMatch.id !== match.id)];
+      window.localStorage.setItem(demoMatchesStorageKey, JSON.stringify(nextMatches));
+      return nextMatches;
+    });
+  }
 
   async function createMatch(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -43,7 +67,7 @@ export function MatchForms() {
         return;
       }
 
-      setSavedMatches((current) => [data.match, ...current]);
+      rememberSavedMatch(data.match);
       target.reset();
       router.refresh();
       setMessage(data.demoMode ? "Match saved in demo mode." : "Match saved.");
@@ -89,7 +113,7 @@ export function MatchForms() {
       {message ? <p className="lg:col-span-2 text-sm text-slate-600">{message}</p> : null}
       {savedMatches.length ? (
         <div className="lg:col-span-2 rounded-lg border border-slate-200 bg-white p-4">
-          <h2 className="mb-3 font-bold text-night">Saved this session</h2>
+          <h2 className="mb-3 font-bold text-night">Saved locally</h2>
           <div className="grid gap-2">
             {savedMatches.map((match) => (
               <div key={match.id} className="rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
