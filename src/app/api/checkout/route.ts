@@ -16,7 +16,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid checkout payload" }, { status: 400 });
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const requestOrigin = new URL(request.url).origin;
+  const configuredAppUrl = process.env.NEXT_PUBLIC_APP_URL;
+  const appUrl =
+    configuredAppUrl && (process.env.NODE_ENV !== "production" || !configuredAppUrl.includes("localhost"))
+      ? configuredAppUrl
+      : requestOrigin;
 
   let entry = null;
 
