@@ -153,3 +153,11 @@ export async function getJsonEntry(entryId: string) {
   const database = await readJsonDatabase();
   return database.entries.find((entry) => entry.id === entryId) ?? null;
 }
+
+export async function getJsonEntries() {
+  const database = await readJsonDatabase();
+
+  return [...database.entries].sort((first, second) => {
+    return new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime();
+  });
+}
