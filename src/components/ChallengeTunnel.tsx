@@ -38,7 +38,6 @@ const emptyParticipant: ParticipantForm = {
 };
 
 const draftKey = "wc2026_prediction_challenge_draft";
-const adminMatchesStorageKey = "world-cup-admin-demo-matches";
 const countryOptions = ["US", "CA", "GB", "FR", "MA", "MX", "DE", "ES", "IT", "BR"];
 
 function calculateAge(birthDate: string) {
@@ -62,25 +61,10 @@ function calculateAge(birthDate: string) {
   return age;
 }
 
-function getSavedAdminMatches() {
-  const savedMatches = window.localStorage.getItem(adminMatchesStorageKey);
-
-  if (!savedMatches) {
-    return [];
-  }
-
-  try {
-    return JSON.parse(savedMatches) as MatchItem[];
-  } catch {
-    window.localStorage.removeItem(adminMatchesStorageKey);
-    return [];
-  }
-}
-
-function mergeMatches(primaryMatches: MatchItem[], secondaryMatches: MatchItem[]) {
+function sortMatches(matches: MatchItem[]) {
   const matchesById = new Map<string, MatchItem>();
 
-  for (const match of [...primaryMatches, ...secondaryMatches]) {
+  for (const match of matches) {
     matchesById.set(match.id, match);
   }
 
@@ -137,10 +121,8 @@ export function ChallengeTunnel() {
       ]);
       const matchesData = (await matchesResponse.json()) as { matches: MatchItem[]; source?: string };
       const eligibilityData = (await eligibilityResponse.json()) as { allowedCountries: string[] };
-      const savedAdminMatches = getSavedAdminMatches();
-      const apiMatches = matchesData.source === "fallback" && savedAdminMatches.length > 0 ? [] : matchesData.matches;
 
-      setMatches(mergeMatches(savedAdminMatches, apiMatches));
+      setMatches(sortMatches(matchesData.matches));
       setAllowedCountries(eligibilityData.allowedCountries);
     }
 

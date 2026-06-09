@@ -1,18 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-
-type SavedMatch = {
-  id: string;
-  groupName: string | null;
-  team1: string;
-  team2: string;
-  matchDate: string;
-  status: string;
-};
-
-const demoMatchesStorageKey = "world-cup-admin-demo-matches";
 
 export function MatchForms() {
   const router = useRouter();
@@ -20,29 +9,6 @@ export function MatchForms() {
   const [matchId, setMatchId] = useState("");
   const [scoreTeam1, setScoreTeam1] = useState("");
   const [scoreTeam2, setScoreTeam2] = useState("");
-  const [savedMatches, setSavedMatches] = useState<SavedMatch[]>([]);
-
-  useEffect(() => {
-    const storedMatches = window.localStorage.getItem(demoMatchesStorageKey);
-
-    if (!storedMatches) {
-      return;
-    }
-
-    try {
-      setSavedMatches(JSON.parse(storedMatches) as SavedMatch[]);
-    } catch {
-      window.localStorage.removeItem(demoMatchesStorageKey);
-    }
-  }, []);
-
-  function rememberSavedMatch(match: SavedMatch) {
-    setSavedMatches((current) => {
-      const nextMatches = [match, ...current.filter((currentMatch) => currentMatch.id !== match.id)];
-      window.localStorage.setItem(demoMatchesStorageKey, JSON.stringify(nextMatches));
-      return nextMatches;
-    });
-  }
 
   async function createMatch(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -67,10 +33,9 @@ export function MatchForms() {
         return;
       }
 
-      rememberSavedMatch(data.match);
       target.reset();
       router.refresh();
-      setMessage(data.jsonMode ? "Match saved in JSON database." : "Match saved.");
+      setMessage(data.jsonMode ? "Match saved in fallback storage." : "Match saved in PostgreSQL.");
     } catch {
       setMessage("Unable to save match.");
     }
@@ -111,20 +76,6 @@ export function MatchForms() {
         <button className="rounded-lg bg-night px-4 py-3 font-bold text-white" type="button" onClick={saveScore}>Save Score</button>
       </div>
       {message ? <p className="lg:col-span-2 text-sm text-slate-600">{message}</p> : null}
-      {savedMatches.length ? (
-        <div className="lg:col-span-2 rounded-lg border border-slate-200 bg-white p-4">
-          <h2 className="mb-3 font-bold text-night">Saved recently</h2>
-          <div className="grid gap-2">
-            {savedMatches.map((match) => (
-              <div key={match.id} className="rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
-                <p className="font-semibold text-night">{match.team1} vs {match.team2}</p>
-                <p>{match.groupName ?? "No group"} - {new Date(match.matchDate).toLocaleString()} - {match.status}</p>
-                <p className="font-mono text-xs">{match.id}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
