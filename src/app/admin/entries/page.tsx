@@ -1,4 +1,5 @@
 import { AdminShell } from "@/components/admin/AdminShell";
+import { LocalJsonEntries } from "@/components/admin/LocalJsonEntries";
 import { getJsonEntries } from "@/lib/json-db";
 import { prisma } from "@/lib/prisma";
 
@@ -52,7 +53,10 @@ export default async function EntriesPage() {
       <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
         <table className="w-full min-w-[860px] text-left text-sm">
           <thead className="bg-slate-50 text-slate-500"><tr><th className="p-3">Participant</th><th>Status</th><th>Grid</th><th>Score</th><th>Rank</th><th>Validated</th></tr></thead>
-          <tbody>{entries.map((entry) => <tr key={entry.id} className="border-t border-slate-200"><td className="p-3 font-semibold">{entry.user.firstName} {entry.user.lastName}</td><td>{entry.status}</td><td>{entry.completedMatches}/{entry.totalMatches}</td><td>{entry.score}</td><td>{entry.rank ?? "-"}</td><td>{entry.validatedAt ? new Date(entry.validatedAt).toISOString() : "-"}</td></tr>)}</tbody>
+          <tbody>
+            <LocalJsonEntries />
+            {entries.map((entry) => <tr key={entry.id} className="border-t border-slate-200"><td className="p-3 font-semibold">{entry.user.firstName} {entry.user.lastName}</td><td>{entry.status}</td><td>{entry.completedMatches}/{entry.totalMatches}</td><td>{entry.score}</td><td>{entry.rank ?? "-"}</td><td>{entry.validatedAt ? new Date(entry.validatedAt).toISOString() : "-"}</td></tr>)}
+          </tbody>
         </table>
       </div>
     </AdminShell>

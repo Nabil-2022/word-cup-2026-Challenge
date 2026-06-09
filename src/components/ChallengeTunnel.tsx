@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { rememberLocalJsonEntry } from "@/components/admin/LocalJsonEntries";
 
 type Choice = "ONE" | "DRAW" | "TWO";
 
@@ -240,6 +241,10 @@ export function ChallengeTunnel() {
       const entryData = await readApiJson(entryResponse);
       if (!entryResponse.ok) {
         throw new Error(entryData.error ?? "Unable to create your entry.");
+      }
+
+      if (entryData.jsonMode && entryData.entry) {
+        rememberLocalJsonEntry(entryData.entry);
       }
 
       const checkoutResponse = await fetch("/api/checkout", {
