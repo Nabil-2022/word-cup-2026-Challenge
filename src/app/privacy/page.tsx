@@ -8,7 +8,7 @@ export default function PrivacyPage() {
       sections={[
         {
           title: "Data Collected",
-          body: "The platform may collect name, email, phone, country code, date of birth, prediction selections, tie-break answer, payment status, device details, and compliance logs."
+          body: "The platform may collect name, email, phone, country code, date of birth, prediction selections, payment status, device details, and compliance logs."
         },
         {
           title: "Use of Data",

@@ -8,7 +8,7 @@ export default function ResponsibleParticipationPage() {
       sections={[
         {
           title: "Skill-Based Format",
-          body: "This is a skill-based prediction competition. Winners are determined by prediction accuracy and tie-break rules."
+          body: "This is a skill-based prediction competition. Winners are determined by prediction accuracy and official rules."
         },
         {
           title: "Entry Fee Notice",
@@ -16,7 +16,7 @@ export default function ResponsibleParticipationPage() {
         },
         {
           title: "No Random Winner Selection",
-          body: "No winner is selected by random chance. Leaderboard results are based on scoring performance and tie-break criteria."
+          body: "No winner is selected by random chance. Leaderboard results are based on scoring performance."
         },
         {
           title: "Personal Limits",

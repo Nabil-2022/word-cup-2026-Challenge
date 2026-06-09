@@ -8,8 +8,7 @@ export default function PaymentCancelPage() {
     >
       <div className="mx-auto max-w-xl space-y-4">
         <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-700">
-          This is a skill-based prediction competition. Winners are determined by prediction accuracy and tie-break
-          rules.
+          This is a skill-based prediction competition. Winners are determined by prediction accuracy and official rules.
         </div>
         <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-700">
           Checkout was not completed. Your entry remains pending until Stripe confirms a successful checkout through

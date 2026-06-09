@@ -26,7 +26,7 @@ Use only these terms in product copy:
 - Participants must be 18+.
 - Access is limited to approved countries.
 - Checkout is available only after a complete prediction grid.
-- Winners are determined by score and tie-break rules.
+- Winners are determined by prediction score and official rules.
 - No random selection flow is part of the product.
 
 ## Pages

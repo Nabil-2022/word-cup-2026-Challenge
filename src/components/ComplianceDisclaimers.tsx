@@ -4,7 +4,7 @@ const disclaimerItems = [
   "Terms Apply.",
   "Eligibility Requirements Apply.",
   "No winner is selected by random chance.",
-  "Winners are determined by prediction accuracy and tie-break criteria.",
+  "Winners are determined by prediction accuracy and official rules.",
   "Local eligibility restrictions may apply.",
   "The platform may block restricted countries.",
   "This competition is not affiliated with FIFA."

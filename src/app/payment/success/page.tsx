@@ -8,8 +8,7 @@ export default function PaymentSuccessPage() {
       description="Entry fee applies. Terms and eligibility conditions apply."
     >
       <div className="mx-auto mb-4 max-w-xl rounded-lg border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-700">
-        This is a skill-based prediction competition. Winners are determined by prediction accuracy and tie-break
-        rules.
+        This is a skill-based prediction competition. Winners are determined by prediction accuracy and official rules.
       </div>
       <ConfirmationStatus />
     </PageShell>

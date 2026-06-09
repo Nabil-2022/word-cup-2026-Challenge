@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "World Cup 2026 Prediction Challenge",
-  description: "A skill-based World Cup 2026 prediction competition with scoring, tie-breaks, and a public leaderboard."
+  description: "A skill-based World Cup 2026 prediction competition with scoring and a public leaderboard."
 };
 
 export default function RootLayout({

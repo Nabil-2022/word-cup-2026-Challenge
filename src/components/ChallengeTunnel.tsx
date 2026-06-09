@@ -24,7 +24,6 @@ type ParticipantForm = {
 type DraftState = {
   participant: ParticipantForm;
   predictions: Record<string, Choice>;
-  tieBreakAnswer: string;
   termsAccepted: boolean;
 };
 
@@ -116,7 +115,6 @@ export function ChallengeTunnel() {
   const [matches, setMatches] = useState<MatchItem[]>([]);
   const [allowedCountries, setAllowedCountries] = useState<string[]>([]);
   const [predictions, setPredictions] = useState<Record<string, Choice>>({});
-  const [tieBreakAnswer, setTieBreakAnswer] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -128,7 +126,6 @@ export function ChallengeTunnel() {
       const parsedDraft = JSON.parse(savedDraft) as DraftState;
       setParticipant(parsedDraft.participant);
       setPredictions(parsedDraft.predictions);
-      setTieBreakAnswer(parsedDraft.tieBreakAnswer);
       setTermsAccepted(parsedDraft.termsAccepted);
     }
 
@@ -161,14 +158,12 @@ export function ChallengeTunnel() {
     participant.email.trim() &&
     participant.countryCode.trim() &&
     participant.birthDate;
-  const completedMatches = Object.keys(predictions).length;
   const totalMatches = matches.length;
+  const completedMatches = matches.filter((match) => Boolean(predictions[match.id])).length;
   const gridComplete = totalMatches > 0 && completedMatches === totalMatches;
-  const tieBreakComplete = tieBreakAnswer.trim() !== "" && Number(tieBreakAnswer) >= 0;
   const readyForCheckout =
-    participantComplete && isAdult && countryAllowed && gridComplete && tieBreakComplete && termsAccepted;
+    participantComplete && isAdult && countryAllowed && gridComplete && termsAccepted;
   const missingCheckoutItems = [
-    !tieBreakComplete ? "Tie-break answer is required." : null,
     !termsAccepted ? "Official rules acceptance is required." : null,
     !gridComplete ? "Complete every match prediction." : null,
     !participantComplete || !isAdult || !countryAllowed ? "Eligibility must be confirmed." : null
@@ -178,7 +173,6 @@ export function ChallengeTunnel() {
     const draft: DraftState = {
       participant,
       predictions,
-      tieBreakAnswer,
       termsAccepted
     };
     window.localStorage.setItem(draftKey, JSON.stringify(draft));
@@ -234,7 +228,7 @@ export function ChallengeTunnel() {
             countryCode: participant.countryCode.toUpperCase(),
             isAdult
           },
-          tieBreakAnswer: Number(tieBreakAnswer),
+          tieBreakAnswer: 0,
           termsAccepted,
           predictions: matches.map((match) => ({
             matchId: match.id,
@@ -382,10 +376,6 @@ export function ChallengeTunnel() {
       {step === 3 ? (
         <section className="mt-6 space-y-4">
           <h2 className="text-xl font-bold text-night">Review</h2>
-          <label className="grid gap-1 text-sm font-medium text-slate-700">
-            How many total goals will be scored during the group stage?
-            <input className="rounded-lg border border-slate-300 px-4 py-3" min="0" placeholder="Enter a number" required type="number" value={tieBreakAnswer} onChange={(event) => setTieBreakAnswer(event.target.value)} />
-          </label>
           <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">
             <p className="font-semibold text-night">{participant.firstName} {participant.lastName}</p>
             <p>{participant.email}</p>
@@ -393,7 +383,7 @@ export function ChallengeTunnel() {
             <p>Checkout starts only after all required fields are complete.</p>
             <p className="mt-3">Entry fee applies. Terms and eligibility conditions apply.</p>
             <p>
-              This is a skill-based prediction competition. Winners are determined by prediction accuracy and tie-break
+              This is a skill-based prediction competition. Winners are determined by prediction accuracy and official
               rules.
             </p>
           </div>

@@ -21,12 +21,11 @@ export default async function LeaderboardPage() {
   return (
     <PageShell
       title="Leaderboard"
-      description="Ranking is determined by prediction score, tie-break distance, and validation time."
+      description="Ranking is determined by prediction score and validation time."
     >
       <section className="mx-auto max-w-3xl">
         <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-700">
-          Score is calculated from correct match predictions. Tie-break distance is based on the total group stage
-          goals estimate. Earlier validation time is used only after score and tie-break distance.
+          Score is calculated from correct match predictions. Earlier validation time is used only after score.
         </div>
 
         {leaderboard.length === 0 ? (
@@ -48,9 +47,7 @@ export default async function LeaderboardPage() {
                     <div className="font-semibold text-night">
                       {row.entry.user.firstName} {row.entry.user.lastName}
                     </div>
-                    <div className="text-sm text-slate-500">
-                      {row.entry.user.countryCode} - tie-break distance {row.tiebreakDistance ?? "-"}
-                    </div>
+                    <div className="text-sm text-slate-500">{row.entry.user.countryCode}</div>
                   </div>
                   <div className="text-right font-bold text-pitch">
                     {row.score}/{row.entry.totalMatches}
