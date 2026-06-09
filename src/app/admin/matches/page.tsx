@@ -1,4 +1,5 @@
 import { AdminShell } from "@/components/admin/AdminShell";
+import { LocalCsvExportButton } from "@/components/admin/LocalCsvExportButtons";
 import { MatchForms } from "@/components/admin/MatchForms";
 import { getJsonMatches } from "@/lib/json-db";
 import { prisma } from "@/lib/prisma";
@@ -29,7 +30,7 @@ export default async function MatchesPage() {
   return (
     <AdminShell title="Matches">
       <MatchForms />
-      <div className="my-4"><a className="font-semibold text-pitch" href="/api/admin/exports/matches">Export CSV</a></div>
+      <div className="my-4 flex flex-wrap gap-3"><a className="font-semibold text-pitch" href="/api/admin/exports/matches">Export server CSV</a><LocalCsvExportButton type="matches" /></div>
       <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
         <table className="w-full min-w-[860px] text-left text-sm">
           <thead className="bg-slate-50 text-slate-500"><tr><th className="p-3">ID</th><th>Group</th><th>Match</th><th>Date</th><th>Score</th><th>Result</th><th>Status</th></tr></thead>

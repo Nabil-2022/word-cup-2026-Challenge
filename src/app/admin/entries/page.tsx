@@ -1,4 +1,5 @@
 import { AdminShell } from "@/components/admin/AdminShell";
+import { LocalCsvExportButton } from "@/components/admin/LocalCsvExportButtons";
 import { LocalJsonEntries } from "@/components/admin/LocalJsonEntries";
 import { getJsonEntries } from "@/lib/json-db";
 import { prisma } from "@/lib/prisma";
@@ -49,7 +50,7 @@ export default async function EntriesPage() {
 
   return (
     <AdminShell title="Entries / Prediction Grids">
-      <div className="mb-4"><a className="font-semibold text-pitch" href="/api/admin/exports/entries">Export CSV</a></div>
+      <div className="mb-4 flex flex-wrap gap-3"><a className="font-semibold text-pitch" href="/api/admin/exports/entries">Export server CSV</a><LocalCsvExportButton type="entries" /></div>
       <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
         <table className="w-full min-w-[860px] text-left text-sm">
           <thead className="bg-slate-50 text-slate-500"><tr><th className="p-3">Participant</th><th>Status</th><th>Grid</th><th>Score</th><th>Rank</th><th>Validated</th></tr></thead>

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getJsonEntries, getJsonMatches } from "@/lib/json-db";
 
 export async function getAdminKpis() {
   let totalRegisteredUsers = 0;
@@ -37,7 +38,24 @@ export async function getAdminKpis() {
       prisma.payment.aggregate({ where: { status: "succeeded" }, _sum: { prizeBudgetAmount: true } })
     ]);
   } catch {
-    // Local demo mode without a running database returns empty KPI values.
+    const [jsonEntries, jsonMatches] = await Promise.all([getJsonEntries(), getJsonMatches()]);
+    const usersByEmail = new Map(jsonEntries.map((entry) => [entry.user.email, entry.user]));
+    const countriesByCode = new Map<string, number>();
+
+    for (const user of usersByEmail.values()) {
+      countriesByCode.set(user.countryCode, (countriesByCode.get(user.countryCode) ?? 0) + 1);
+    }
+
+    totalRegisteredUsers = usersByEmail.size;
+    paidParticipants = jsonEntries.filter((entry) => entry.status === "locked").length;
+    entryCompletionRows = jsonEntries.map((entry) => ({
+      totalMatches: entry.totalMatches || jsonMatches.length,
+      completedMatches: entry.completedMatches
+    }));
+    countries = [...countriesByCode.entries()].map(([countryCode, count]) => ({
+      countryCode,
+      _count: { countryCode: count }
+    }));
   }
 
   return {

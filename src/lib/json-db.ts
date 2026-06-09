@@ -161,3 +161,52 @@ export async function getJsonEntries() {
     return new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime();
   });
 }
+
+export async function getJsonExportRows(type: string): Promise<Array<Record<string, unknown>> | null> {
+  const database = await readJsonDatabase();
+
+  if (type === "matches") {
+    return database.matches;
+  }
+
+  if (type === "participants") {
+    const usersByEmail = new Map(
+      database.entries.map((entry) => [
+        entry.user.email,
+        {
+          id: entry.user.email,
+          firstName: entry.user.firstName,
+          lastName: entry.user.lastName,
+          email: entry.user.email,
+          countryCode: entry.user.countryCode,
+          isAdult: entry.user.isAdult,
+          status: entry.status === "locked" ? "participant" : "registered",
+          createdAt: entry.createdAt
+        }
+      ])
+    );
+
+    return [...usersByEmail.values()];
+  }
+
+  if (type === "entries") {
+    return database.entries.map((entry) => ({
+      id: entry.id,
+      firstName: entry.user.firstName,
+      lastName: entry.user.lastName,
+      email: entry.user.email,
+      countryCode: entry.user.countryCode,
+      status: entry.status,
+      completedMatches: entry.completedMatches,
+      totalMatches: entry.totalMatches,
+      predictions: entry.predictions,
+      createdAt: entry.createdAt
+    }));
+  }
+
+  if (["payments", "leaderboard", "winners", "compliance", "audit"].includes(type)) {
+    return [];
+  }
+
+  return null;
+}

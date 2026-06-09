@@ -1,4 +1,5 @@
 import { AdminShell } from "@/components/admin/AdminShell";
+import { LocalCsvExportButton } from "@/components/admin/LocalCsvExportButtons";
 import { LocalJsonParticipants } from "@/components/admin/LocalJsonEntries";
 import { getJsonEntries } from "@/lib/json-db";
 import { prisma } from "@/lib/prisma";
@@ -43,7 +44,7 @@ export default async function ParticipantsPage() {
 
   return (
     <AdminShell title="Participants">
-      <div className="mb-4"><a className="font-semibold text-pitch" href="/api/admin/exports/participants">Export CSV</a></div>
+      <div className="mb-4 flex flex-wrap gap-3"><a className="font-semibold text-pitch" href="/api/admin/exports/participants">Export server CSV</a><LocalCsvExportButton type="participants" /></div>
       <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
         <table className="w-full min-w-[760px] text-left text-sm">
           <thead className="bg-slate-50 text-slate-500"><tr><th className="p-3">Name</th><th>Email</th><th>Country</th><th>Eligibility</th><th>Status</th><th>Created</th></tr></thead>
